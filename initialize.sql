@@ -1,5 +1,7 @@
 /** RUN THESE QUERIES ON YOUR CONCRETE 5 DATABASE BEFORE YOU ENABLE IT **/
 
+Insert into `AuthenticationTypes` (authTypeHandle,authTypeIsEnabled,authTypeDisplayOrder,pkgID) values ('ldap',0,0,0);
+
 CREATE TABLE `authTypeLdapSettings` (
   `ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `setting` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
