@@ -13,7 +13,10 @@ class Controller extends AuthenticationTypeController
 {
 
     //public $apiMethods = array();
-
+ public function getHandle()
+    {
+        return 'concrete';
+    }
 
     private function __ldap_connect(){
         if (!isset($this->connection)) {
@@ -194,5 +197,9 @@ class Controller extends AuthenticationTypeController
     public function isAuthenticated(User $u)
     {
         return ($u->isLoggedIn());
+    }
+    public function v($hash = '')
+    {
+       
     }
 }
