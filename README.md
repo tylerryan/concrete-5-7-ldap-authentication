@@ -1,7 +1,9 @@
-Concrete 5.7+ LDAP-authentication Module
+Concrete 5.7 LDAP-authentication Module
 ================================
 #Note
-__This module will only work in 5.7+. Prior versions do not follow the namespace scheme and do not support 3rd party authentication.__
+__This module will only work in 5.7. 
+Please use the latest branch to get the working module for your version
+Prior versions do not follow the namespace scheme and do not support 3rd party authentication.__
 # Setup
 
 1. Run the SQL script in your Concrete 5 DB
