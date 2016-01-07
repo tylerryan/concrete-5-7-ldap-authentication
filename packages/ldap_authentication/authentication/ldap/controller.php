@@ -1,5 +1,5 @@
 <?php
-namespace Application\Authentication\Ldap;
+namespace Concrete\Package\LdapAuthentication\Authentication\Ldap;
 
 use Concrete\Core\Authentication\AuthenticationTypeController;
 use Config;
