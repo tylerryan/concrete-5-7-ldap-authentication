@@ -11,6 +11,10 @@ use View;
 
 class Controller extends AuthenticationTypeController
 {
+    
+    public function getHandle() {
+        return 'ldap';
+    }
 
     //public $apiMethods = array();
 

@@ -18,6 +18,6 @@ class Controller extends Package {
     
     public function install() {
        $pkg = parent::install();
-       \Concrete\Core\Authentication\AuthenticationType::add($this->pkgHandle, $this->getPackageName(), $pkg);
+       \Concrete\Core\Authentication\AuthenticationType::add('ldap', 'Ldap', 0, $pkg);
     }
 }
