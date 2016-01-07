@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<schema version="0.3">
+	<table name="authTypeLdapSettings">
+		<field name="ID" type="I">
+			<key />
+			<unsigned />
+			<autoincrement />
+		</field>
+        <field name="setting" type="C" size="255"/>
+        <field name="value" type="C" size="255"/>
+        <index name="setting">
+            <unique/>
+            <col>setting</col>
+        </index>
+	</table>
+	<table name="authTypeLdapUserData">
+        <field name="uID" type="I">
+            <key />
+            <unsigned />
+            <autoincrement />
+        </field>
+        <field name="name" type="C" size="255"/>
+        <field name="first_name" type="C" size="255"/>
+        <field name="last_name" type="C" size="255"/>
+        <field name="link" type="C" size="255"/>
+        <field name="username" type="C" size="255"/>
+        <field name="birthday" type="C" size="255"/>
+        <field name="gender" type="C" size="255"/>
+        <field name="email" type="C" size="255"/>
+        <field name="timezone" type="C" size="255"/>
+        <field name="locale" type="C" size="255"/>
+        <field name="verified" type="C" size="255"/>
+        <field name="updated_time" type="C" size="255"/>
+    </table>
+	<table name="authTypeLdapUserMap">
+	     <field name="uID" type="I">
+            <unsigned />
+        </field>
+	    <field name="ldUserID" type="C" size="255"/>
+	    <index name="uID_ldUserID">
+            <unique/>
+            <col>uID</col>
+            <col>ldUserID</col>
+        </index>
+    </table>
+</schema>
