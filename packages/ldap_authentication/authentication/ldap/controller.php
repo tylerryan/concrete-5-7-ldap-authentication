@@ -23,7 +23,7 @@ class Controller extends AuthenticationTypeController
 
     private function __ldap_connect(){
         if (!isset($this->connection)) {
-            $con = ldap_connect($this->config('ldaphost'), 389);
+            $con = ldap_connect(Config::get('auth.ldap.ldaphost'), 389);
             $anon = ldap_bind($con);
             if(!$anon){
                  throw new Exception(t('Failed to connect to LDAP.'));
