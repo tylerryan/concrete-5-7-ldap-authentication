@@ -66,7 +66,7 @@ class Controller extends AuthenticationTypeController
               $user = \User::loginByUserID($ui->getUserID());
            }
            
-           if($user->isError()) { 
+           if(is_object($user) && $user->isError()) { 
                 switch ($user->getError()) {
                     case USER_SESSION_EXPIRED:
                         throw new \Exception(t('Your session has expired. Please sign in again.'));
@@ -212,7 +212,7 @@ class Controller extends AuthenticationTypeController
             $user_info->setAttribute($key, $last_name);
         }
 
-        \User::loginByUserID($user_info->getUserID());
+        $user = \User::loginByUserID($user_info->getUserID());
 
         $this->mapUserByLdapUser($username, $user_info->getUserID());
 
