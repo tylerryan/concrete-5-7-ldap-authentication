@@ -12,6 +12,8 @@ use View;
 class Controller extends AuthenticationTypeController
 {
     
+    public $testMode = true;
+    
     public function getHandle() {
         return 'ldap';
     }
@@ -33,40 +35,39 @@ class Controller extends AuthenticationTypeController
 
     public function authenticate()
     {
-
+        //@todo sanitize post input
         $post = $this->post();
         $this->__ldap_connect();
         if (empty($post['uName']) || empty($post['uPassword'])) {
             throw new Exception(t('Please provide both username and password.'));
         }
+        $domain = trim(Config::get('auth.ldap.ldapdomain'));
         $uName = $post['uName'];
+        if(strlen($domain)) {
+            $ldapLoginuName = Config::get('auth.ldap.ldapdomain').'\\'.$uName;    
+        }
+        
         $uPassword = $post['uPassword'];
 
-        
-        $bindDn = "userid=$uName," . $this->config('ldapdn');
-        if(!@ldap_bind($this->connection,$bindDn,$uPassword)){
+        if(!@ldap_bind($this->connection,$ldapLoginuName,$uPassword)){
            throw new \Exception(t('Invalid username or password.'));        
-        }
-        else {
-
-            $uinf = UserInfo::getByUserName($uName);
-           if(!is_object($uinf) || !($uinf instanceof UserInfo) || $uinf->isError()){
-            throw new \Exception(t('This account does not exist on this website.'));
-          }
-
-           // var_dump($uinf->getUserID());
+        } else {
             \Session::remove('accessEntities');
-           $uid = User::getByUserID($uinf->getUserID(),true);
-
-            if(is_object($uid) || ($uid instanceof User) || !$uid->isError()) { 
-                 if(!$this->getUserByLdapUser($uName)){
-                    $this->mapUserByLdapUser($uName);
-                }
-                
-            }
-            else {
-                
-                switch ($uid->getError()) {
+            
+           $uID = $this->getUserByLdapUser($uName);
+           if($uID) { // ldap user has been bound to a c5 user
+            $ui = UserInfo::getByID($uID);    
+           }
+           
+           
+           if(!is_object($ui) || !($ui instanceof UserInfo) || $ui->isError()) { // user needs to be created
+             $user = $this->createUser($uName, $uName."@".$domain.'.com'); // @TODO email is a total hack right now - fix it.
+           } else {
+              $user = \User::loginByUserID($ui->getUserID());
+           }
+           
+           if($user->isError()) { 
+                switch ($user->getError()) {
                     case USER_SESSION_EXPIRED:
                         throw new \Exception(t('Your session has expired. Please sign in again.'));
                         break;
@@ -88,9 +89,9 @@ class Controller extends AuthenticationTypeController
         }
 
         if ($post['uMaintainLogin']) {
-            $uid->setAuthTypeCookie('concrete');
+            $user->setAuthTypeCookie('ldap');
         }
-       $this->completeAuthentication($uid);
+       $this->completeAuthentication($user);
        
     }
 
@@ -101,28 +102,8 @@ class Controller extends AuthenticationTypeController
     }
 
 
-    public function getLdapUserInfo()
-    {
-        $u = new User();
-        if (is_object($u) && $u->isLoggedIn()) {
-            $db = Loader::db();
-            return $db->query('SELECT * FROM authTypeLdapUserData WHERE uID=?', array($u->getUserID()))->fetchRow();
-        }
-    }
-
     public function view()
     {
-    }
-
-    public function config($key, $value = false)
-    {
-        $db = Loader::db();
-        if ($value === false) {
-            return $db->getOne('SELECT value FROM authTypeLdapSettings WHERE setting=?', array($key));
-        }
-        $db->execute('DELETE FROM authTypeLdapSettings WHERE setting=?', array($key));
-        $db->execute('INSERT IGNORE INTO authTypeLdapSettings (setting,value) VALUES (?,?)', array($key, $value));
-        return $value;
     }
 
     public function getLdapUserByUser($uid)
@@ -138,45 +119,38 @@ class Controller extends AuthenticationTypeController
     public function edit()
     {
         $this->set('form', Loader::helper('form'));
-        $this->set('ldaphost', $this->config('ldaphost'));
-        $this->set('ldapdn', $this->config('ldapdn'));
+        $this->set('ldaphost', \Config::get('auth.ldap.ldaphost'));
+        $this->set('ldapdn', \Config::get('auth.ldap.ldapdn'));
+        $this->set('ldapdomain', \Config::get('auth.ldap.ldapdomain'));
     }
 
     public function saveAuthenticationType($args)
     {
-        $this->config('ldapdn', $args['ldapdn']);
-        $this->config('ldaphost', $args['ldaphost']);
+        \Config::save('auth.ldap.ldapdn', $args['ldapdn']);
+        \Config::save('auth.ldap.ldaphost', $args['ldaphost']);
+        \Config::save('auth.ldap.ldapdomain', $args['ldapdomain']);
     }
 
     public function getUserByLdapUser($ldu)
     {
         $db = Loader::db();
         $uid = $db->getOne('SELECT uID FROM authTypeLdapUserMap WHERE ldUserID=?', array($ldu));
-        // if (!$uid) {
-        //     throw new \Exception(t('This Ldap account is not tied to a user.'));
-        // }
-        return $uid;
+        User::getByUserID($uid);
+        
+        if (!$uid) {
+            return false;
+        } else { 
+            return $uid;
+        }
     }
 
-    public function mapUserByLdapUser($ldu)
+    public function mapUserByLdapUser($ldu, $uID)
     {
-        $u = new User();
         $db = Loader::db();
        
-        $db->execute('DELETE FROM authTypeLdapUserMap WHERE ldUserID=? OR uID=?', array($ldu, $u->getUserID()));
-        $db->execute('INSERT INTO authTypeLdapUserMap (ldUserID,uID) VALUES (?,?)', array($ldu, $u->getUserID()));
+        $db->execute('DELETE FROM authTypeLdapUserMap WHERE ldUserID=? OR uID=?', array($ldu, $uID));
+        $db->execute('INSERT INTO authTypeLdapUserMap (ldUserID,uID) VALUES (?,?)', array($ldu, $uID));
         return true;
-    }
-
-    private function genString($a = 20)
-    {
-        $o = '';
-        $chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+{}|":<>?\'\\';
-        $l = strlen($chars);
-        while ($a--) {
-            $o .= substr($chars, rand(0, $l), 1);
-        }
-        return md5($o);
     }
 
     public function deauthenticate(User $u)
@@ -199,4 +173,58 @@ class Controller extends AuthenticationTypeController
     {
         return ($u->isLoggedIn());
     }
+    
+    public function registrationGroupID() 
+    {
+        return 0;
+    }
+    
+    protected function createUser($username, $email, $first_name='', $last_name = '')
+    {
+
+        $data = array();
+        $data['uName'] = $username;
+        $data['uPassword'] = \Illuminate\Support\Str::random(256);
+        $data['uEmail'] = $email;
+        $data['uIsValidated'] = 1;
+
+        $user_info = \UserInfo::add($data);
+
+        if (!$user_info) {
+            throw new Exception('Unable to create new account.');
+        }
+
+        if ($group_id = intval($this->registrationGroupID(), 10)) {
+            $group = \Group::getByID($group_id);
+            if ($group && is_object($group) && !$group->isError()) {
+                $user = \User::getByUserID($user_info->getUserID());
+                $user->enterGroup($group);
+            }
+        }
+
+        $key = \UserAttributeKey::getByHandle('first_name');
+        if ($key) {
+            $user_info->setAttribute($key, $first_name);
+        }
+
+        $key = \UserAttributeKey::getByHandle('last_name');
+        if ($key) {
+            $user_info->setAttribute($key, $last_name);
+        }
+
+        \User::loginByUserID($user_info->getUserID());
+
+        $this->mapUserByLdapUser($username, $user_info->getUserID());
+
+        return $user;
+    }
+    
+    /*
+     * Query the ldap server for the user's info (name, email etc..)
+     * @TODO make this work
+     */
+    public function getLdapUserInfo($uName) {
+        return array();
+    }
+    
 }
