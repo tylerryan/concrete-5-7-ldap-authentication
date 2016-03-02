@@ -61,7 +61,7 @@ class Controller extends AuthenticationTypeController
            
            
            if(!is_object($ui) || !($ui instanceof UserInfo) || $ui->isError()) { // user needs to be created
-             $user = $this->createUser($uName, $uName."@".$domain.'.com'); // @TODO email is a total hack right now - fix it.
+             $user = $this->createUser($uName, $uName."@".$domain.'.us'); // @TODO email is a total hack right now - fix it.
            } else {
               $user = \User::loginByUserID($ui->getUserID());
            }
